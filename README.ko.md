@@ -49,6 +49,20 @@ utc> exit
 | Ubuntu, Debian | apt | 예정 |
 | macOS | Homebrew | 예정 |
 
+## 소스에서 빌드하기
+
+첫 릴리즈 전까지는 소스를 직접 빌드해 실행할 수 있습니다. Node.js 22.13 이상이 필요합니다.
+
+```console
+$ git clone https://github.com/JAEJUN090210/Uranus-TOTP.git
+$ cd Uranus-TOTP
+$ npm install
+$ npm run build
+$ node dist/utc.cjs --help
+```
+
+빌드 후 `npm link`를 실행하면 어디서나 `utc` 명령을 쓸 수 있습니다.
+
 ## 보안
 
 - 비밀번호는 어디에도 저장하지 않습니다. 비밀번호를 잊으면 저장한 계정을 되살릴 수 없습니다.
