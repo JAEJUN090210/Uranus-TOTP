@@ -39,6 +39,16 @@ utc> generate work github
 utc> exit
 ```
 
+### Global options
+
+| Option | Description |
+| --- | --- |
+| `--json` | Print results as JSON for scripts |
+| `-V, --version` | Print the version |
+| `-h, --help` | Show help |
+
+Colors turn off automatically when the output is not a terminal or the `NO_COLOR` environment variable is set.
+
 ## Installation
 
 Uranus-TOTP will be available through the following channels.
