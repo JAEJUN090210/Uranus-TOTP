@@ -5,6 +5,7 @@ import { createAddTokenCommand } from '../commands/add-token';
 import { createGenerateCommand } from '../commands/generate';
 import { createInstantCommand } from '../commands/instant';
 import { createListCommand } from '../commands/list';
+import { createRenameCommand } from '../commands/rename';
 import { createSetLengthCommand } from '../commands/set-length';
 import { createSetPrefixCommand } from '../commands/set-prefix';
 import { createUpdateCommand } from '../commands/update';
@@ -36,6 +37,7 @@ export const COMMAND_GROUPS: readonly CommandGroup[] = [
       createUpdateCommand,
       createSetLengthCommand,
       createSetPrefixCommand,
+      createRenameCommand,
     ],
   },
   { heading: 'Storage:', commands: [] },
@@ -71,9 +73,20 @@ export function createProgram(
   for (const group of groups) {
     program.commandsGroup(group.heading);
     for (const createCommand of group.commands) {
-      // addCommand는 .command()와 달리 부모 설정을 물려주지 않으므로 직접 복사합니다.
-      program.addCommand(createCommand(runtime).copyInheritedSettings(program));
+      program.addCommand(inheritSettings(createCommand(runtime), program));
     }
   }
   return program;
+}
+
+/**
+ * addCommand는 .command()와 달리 부모 설정을 물려주지 않으므로 직접 복사합니다.
+ * rename처럼 하위 명령이 있는 명령은 그 아래까지 복사해야 인자 오류가 프로세스를 끝내지 않습니다.
+ */
+function inheritSettings(command: Command, parent: Command): Command {
+  command.copyInheritedSettings(parent);
+  for (const subcommand of command.commands) {
+    inheritSettings(subcommand, command);
+  }
+  return command;
 }
