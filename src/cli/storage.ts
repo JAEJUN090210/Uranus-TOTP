@@ -27,11 +27,30 @@ export function passwordFromEnv(runtime: Runtime): string | undefined {
   return password === undefined || password === '' ? undefined : password;
 }
 
-/** 저장소를 엽니다. 아직 없으면 강도와 새 비밀번호를 물어 새로 만듭니다. */
+/**
+ * 저장소를 엽니다. 아직 없으면 강도와 새 비밀번호를 물어 새로 만듭니다.
+ * 대화형 셸에서는 한 번 연 저장소를 세션에 기억해 두고 다음 명령에서 그대로 씁니다.
+ */
 export async function openStore(
   runtime: Runtime,
   output: Output,
   options: OpenStoreOptions = {},
+): Promise<Store> {
+  const { session } = runtime;
+  if (session?.store !== undefined) {
+    return session.store;
+  }
+  const store = await openOrCreateStore(runtime, output, options);
+  if (session !== undefined) {
+    session.store = store;
+  }
+  return store;
+}
+
+async function openOrCreateStore(
+  runtime: Runtime,
+  output: Output,
+  options: OpenStoreOptions,
 ): Promise<Store> {
   const path = credentialsPath(runtime.env, runtime.platform, homedir());
   if (await Store.exists(path)) {
