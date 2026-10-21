@@ -2,6 +2,7 @@ import { Command, Option } from 'commander';
 
 import pkg from '../../package.json' with { type: 'json' };
 import { createAddTokenCommand } from '../commands/add-token';
+import { createDeleteCommand } from '../commands/delete';
 import { createGenerateCommand } from '../commands/generate';
 import { createInstantCommand } from '../commands/instant';
 import { createListCommand } from '../commands/list';
@@ -38,6 +39,7 @@ export const COMMAND_GROUPS: readonly CommandGroup[] = [
       createSetLengthCommand,
       createSetPrefixCommand,
       createRenameCommand,
+      createDeleteCommand,
     ],
   },
   { heading: 'Storage:', commands: [] },
