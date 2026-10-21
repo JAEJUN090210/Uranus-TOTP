@@ -64,6 +64,7 @@ describe('runCommand', () => {
     expect(stdout).toContain('Usage: utc');
     expect(stdout).toContain('Testing:');
     expect(stdout).toContain('--json');
+    expect(stdout).toContain('--strength');
   });
 
   it('prints human-readable output by default', async () => {
