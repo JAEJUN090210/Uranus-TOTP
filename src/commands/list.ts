@@ -7,20 +7,10 @@ import type { Account, Namespace } from '../core/storage/model';
 import { findNamespace } from '../core/storage/vault';
 import { Output } from '../ui/output';
 import type { Column } from '../ui/table';
+import { describeAccount } from './account-format';
 
 function byName(a: { name: string }, b: { name: string }): number {
   return a.name.localeCompare(b.name);
-}
-
-/** 계정 목록에 보여 줄 값입니다. 시크릿은 dump로만 꺼낼 수 있도록 넣지 않습니다. */
-export function describeAccount(account: Account) {
-  return {
-    name: account.name,
-    length: account.length,
-    algorithm: account.algorithm,
-    timePeriod: account.timePeriod,
-    prefix: account.prefix,
-  };
 }
 
 const NAMESPACE_COLUMNS: readonly Column<Namespace>[] = [

@@ -5,6 +5,9 @@ import { createAddTokenCommand } from '../commands/add-token';
 import { createGenerateCommand } from '../commands/generate';
 import { createInstantCommand } from '../commands/instant';
 import { createListCommand } from '../commands/list';
+import { createSetLengthCommand } from '../commands/set-length';
+import { createSetPrefixCommand } from '../commands/set-prefix';
+import { createUpdateCommand } from '../commands/update';
 import { STRENGTH_NAMES, type Strength } from '../core/storage/crypto';
 import { createColors, shouldUseColor } from '../ui/colors';
 import type { Runtime } from './runtime';
@@ -25,7 +28,16 @@ export interface CommandGroup {
 /** 도움말에 보여줄 명령 분류입니다. 새 명령은 알맞은 분류의 commands에 추가합니다. */
 export const COMMAND_GROUPS: readonly CommandGroup[] = [
   { heading: 'Codes:', commands: [createGenerateCommand, createInstantCommand] },
-  { heading: 'Accounts:', commands: [createAddTokenCommand, createListCommand] },
+  {
+    heading: 'Accounts:',
+    commands: [
+      createAddTokenCommand,
+      createListCommand,
+      createUpdateCommand,
+      createSetLengthCommand,
+      createSetPrefixCommand,
+    ],
+  },
   { heading: 'Storage:', commands: [] },
 ];
 
