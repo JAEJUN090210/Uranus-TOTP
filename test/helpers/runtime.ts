@@ -11,6 +11,8 @@ export interface TestRuntimeOptions {
   readonly answers?: readonly string[];
   /** 사람이 터미널에서 답하는 것처럼 할지 여부입니다. */
   readonly interactive?: boolean;
+  /** `import -`처럼 표준 입력을 끝까지 읽을 때 돌려줄 내용입니다. */
+  readonly input?: string;
 }
 
 /** 출력 내용을 문자열로 모으고, 질문에는 정해 둔 답을 주는 테스트용 실행 환경을 만듭니다. */
@@ -31,6 +33,7 @@ export function createTestRuntime(options: TestRuntimeOptions = {}) {
     interactive: options.interactive ?? false,
     line: async (question) => (await answer(question)).trim(),
     secret: answer,
+    readAll: () => Promise.resolve(options.input ?? ''),
     close: () => undefined,
   };
   const runtime: Runtime = {

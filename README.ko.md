@@ -156,6 +156,53 @@ $ utc delete work --yes
 | --- | --- |
 | `-y, --yes` | 묻지 않고 지우기 |
 
+### change-password
+
+비밀번호를 바꿉니다. 터미널에서는 지금 강도를 기본값으로 강도를 다시 묻고, 새 비밀번호를 두 번 입력받습니다. `--strength`를 주면 강도 질문을 건너뜁니다. `UTC_PASS`는 지금 비밀번호로만 쓰고 새 비밀번호로는 쓰지 않습니다.
+
+```console
+$ utc change-password
+$ utc --strength strong change-password
+```
+
+### dump
+
+모든 계정을 시크릿까지 JSON으로 내보냅니다. 파일이 **암호화되지 않으므로** `--yes`가 필요하고, 본인만 읽을 수 있는 권한으로 만듭니다. `-`를 주면 표준 출력으로 내보내므로 다른 도구로 바로 암호화할 수 있습니다.
+
+```console
+$ utc dump backup.json --yes
+$ utc dump - --yes | age -e -r age1... > backup.json.age
+```
+
+| 옵션 | 설명 |
+| --- | --- |
+| `-y, --yes` | 시크릿을 암호화하지 않고 쓴다는 확인 |
+
+### import
+
+`dump`가 쓰는 형식의 JSON에서 계정을 가져옵니다. 저장하기 전에 모든 계정과 시크릿을 확인합니다. 이미 있는 계정이면 터미널에서는 덮어쓸지 묻고, 터미널이 없으면 그대로 두고 알려 줍니다. `-`를 주면 표준 입력을 읽으며, 이때 비밀번호는 `UTC_PASS`로 줘야 합니다.
+
+```console
+$ utc import backup.json
+$ utc import backup.json --overwrite
+```
+
+| 옵션 | 설명 |
+| --- | --- |
+| `--overwrite` | 이미 있는 계정을 묻지 않고 덮어쓰기 |
+
+#### totp-cli에서 옮겨 오기
+
+`dump`가 쓰는 JSON은 totp-cli `dump`의 YAML과 구조와 키 이름이 같습니다. 그래서 totp-cli에서 내보낸 파일을 JSON으로 바꾸면 그대로 가져올 수 있습니다. 예를 들어 [yq](https://github.com/mikefarah/yq)를 쓰면 다음과 같습니다.
+
+```console
+$ totp-cli dump --yes-please --output totp-cli.yaml
+$ yq -o=json totp-cli.yaml > totp-cli.json
+$ utc import totp-cli.json
+```
+
+두 파일에는 시크릿이 암호화되지 않은 채로 들어 있으니 다 옮긴 뒤에는 지우세요.
+
 ## 저장소
 
 모든 계정은 저장소 파일 하나에 보관합니다. 비밀번호에서 scrypt로 만든 키로 AES-256-GCM 암호화를 합니다.
