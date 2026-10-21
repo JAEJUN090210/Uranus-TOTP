@@ -1,17 +1,21 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import pkg from '../package.json' with { type: 'json' };
 import { APT_COMPONENT, APT_KEY_FILE, APT_SUITE, PAGES_URL } from './lib/pages';
 
 // 사용법: tsx scripts/build-site.ts   (apt 저장소는 build-apt-repo.ts가 따로 만듭니다)
-// GitHub Pages에 올릴 첫 페이지(index.html)를 dist/site에 씁니다. 사이트에는 apt/가 함께 올라갑니다.
+// GitHub Pages에 올릴 첫 페이지(index.html)를 쓰고, 설치 스크립트를 dist/site에 복사합니다.
+// 사이트에는 install.sh, install.ps1, apt/가 함께 올라갑니다.
 
 const ROOT = resolve(import.meta.dirname, '..');
 const SITE = join(ROOT, 'dist', 'site');
 const REPOSITORY_URL = 'https://github.com/JAEJUN090210/Uranus-TOTP';
 
 mkdirSync(SITE, { recursive: true });
+for (const script of ['install.sh', 'install.ps1']) {
+  copyFileSync(join(ROOT, 'scripts', script), join(SITE, script));
+}
 
 function escapeHtml(text: string): string {
   return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
@@ -24,6 +28,16 @@ interface Method {
 }
 
 const methods: readonly Method[] = [
+  {
+    title: 'Linux and macOS',
+    commands: [`curl -fsSL ${PAGES_URL}/install.sh | sh`],
+    note: 'Installs to ~/.local/bin without sudo and adds it to your PATH. Run it again to update.',
+  },
+  {
+    title: 'Windows (PowerShell)',
+    commands: [`irm ${PAGES_URL}/install.ps1 | iex`],
+    note: 'Installs to %LOCALAPPDATA%\\Programs\\utc without administrator rights and adds it to your PATH. Run it again to update.',
+  },
   {
     title: 'Ubuntu and Debian (amd64, arm64)',
     commands: [
