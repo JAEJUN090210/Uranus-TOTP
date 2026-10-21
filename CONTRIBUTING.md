@@ -113,8 +113,15 @@ hotfix/31_import-overwrite
 2. `develop`을 `main`으로 머지합니다.
 3. `main`에 `vX.Y.Z` 태그를 붙여 올립니다. (`git tag -a vX.Y.Z -m "🚀 :: vX.Y.Z"`, `git push origin vX.Y.Z`)
 4. 태그가 올라가면 [Release 워크플로](.github/workflows/release.yml)가 나머지를 처리합니다.
-   - Windows x64, Linux x64·arm64, macOS arm64·x64용 실행 파일을 빌드하고 실제로 실행해 봅니다.
+   - Windows x64, Linux x64·arm64, macOS arm64·x64용 실행 파일과 `.deb`를 빌드하고 실제로 실행해 봅니다.
    - GitHub Release `🚀 :: vX.Y.Z`를 만들고 파일과 `SHA256SUMS`를 올립니다.
+   - 안내 페이지와 서명한 apt 저장소를 GitHub Pages에 올립니다.
 5. 자동으로 만들어진 Release 본문을 변경 내용에 맞게 다듬습니다.
 
-태그와 `package.json`의 버전이 다르면 워크플로는 아무것도 게시하지 않고 실패합니다. 배포에 쓰는 파일을 바꾼 PR에서는 같은 워크플로가 게시 없이 빌드만 시험합니다.
+태그와 `package.json`의 버전이 다르면 워크플로는 아무것도 게시하지 않고 실패합니다. 배포에 쓰는 파일을 바꾼 PR에서는 같은 워크플로가 게시 없이 빌드와 설치 시험만 합니다.
+
+게시 단계에는 저장소 Secret이 필요하고, 없으면 그 단계만 건너뜁니다.
+
+| Secret | 용도 |
+| --- | --- |
+| `APT_GPG_PRIVATE_KEY` | apt 저장소 서명 키(ASCII armor). 키에 암호가 있으면 `APT_GPG_PASSPHRASE`도 등록 |
