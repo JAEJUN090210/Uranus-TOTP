@@ -7,9 +7,14 @@ const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 // RFC 4648에서 마지막 8글자 묶음은 2, 4, 5, 7글자만 될 수 있습니다. 다른 길이는 잘못 옮겨 적은 것입니다.
 const VALID_REMAINDERS = new Set([0, 2, 4, 5, 7]);
 
+/** 시크릿에서 공백과 `=` 패딩을 빼고 대문자로 바꿉니다. 서비스마다 보여 주는 모양이 달라도 같은 값이 됩니다. */
+export function normalizeToken(token: string): string {
+  return token.replace(/\s/g, '').replace(/=+$/, '').toUpperCase();
+}
+
 /** 서비스가 보여 주는 Base32 시크릿을 바이트로 바꿉니다. 공백, 소문자, `=` 패딩은 허용합니다. */
 export function decodeBase32(token: string): Buffer {
-  const text = token.replace(/\s/g, '').replace(/=+$/, '').toUpperCase();
+  const text = normalizeToken(token);
   if (text === '' || !VALID_REMAINDERS.has(text.length % 8)) {
     throw new UserError('the token is not valid Base32: check that it was copied completely');
   }
