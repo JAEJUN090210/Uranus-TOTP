@@ -12,6 +12,8 @@ export interface Prompt {
   line(question: string): Promise<string>;
   /** 입력한 글자를 화면에 보이지 않게 받습니다. 비밀번호와 시크릿에 쓰며, 공백도 그대로 둡니다. */
   secret(question: string): Promise<string>;
+  /** 남은 입력을 끝까지 읽습니다. `import -`처럼 표준 입력을 파일 대신 쓸 때 씁니다. */
+  readAll(): Promise<string>;
   /** 입력 스트림을 놓아 프로세스가 끝날 수 있게 합니다. */
   close(): void;
 }
@@ -64,6 +66,14 @@ class PipePrompt implements Prompt {
       throw new UserError(`standard input ended before the ${labelOf(question)} was given`);
     }
     return line;
+  }
+
+  async readAll(): Promise<string> {
+    const lines: string[] = [];
+    for (let line = await this.next(); line !== undefined; line = await this.next()) {
+      lines.push(line);
+    }
+    return lines.join('\n');
   }
 
   close(): void {
@@ -205,6 +215,13 @@ class TerminalPrompt implements Prompt {
       input.on('data', onData);
       input.resume();
     });
+  }
+
+  readAll(): Promise<string> {
+    // 사람이 내용을 타이핑하게 하기보다 파일을 넘기도록 안내합니다.
+    return Promise.reject(
+      new UserError('standard input is a terminal: pipe the file into it, or give a file name'),
+    );
   }
 
   close(): void {
