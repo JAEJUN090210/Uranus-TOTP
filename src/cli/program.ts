@@ -1,6 +1,8 @@
 import { Command, Option } from 'commander';
 
 import pkg from '../../package.json' with { type: 'json' };
+import { createGenerateCommand } from '../commands/generate';
+import { createInstantCommand } from '../commands/instant';
 import { STRENGTH_NAMES } from '../core/storage/crypto';
 import { createColors, shouldUseColor } from '../ui/colors';
 import type { Runtime } from './runtime';
@@ -14,7 +16,7 @@ export interface CommandGroup {
 
 /** 도움말에 보여줄 명령 분류입니다. 새 명령은 알맞은 분류의 commands에 추가합니다. */
 export const COMMAND_GROUPS: readonly CommandGroup[] = [
-  { heading: 'Codes:', commands: [] },
+  { heading: 'Codes:', commands: [createGenerateCommand, createInstantCommand] },
   { heading: 'Accounts:', commands: [] },
   { heading: 'Storage:', commands: [] },
 ];

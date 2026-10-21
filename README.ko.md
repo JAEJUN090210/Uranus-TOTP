@@ -50,6 +50,42 @@ utc> exit
 
 출력이 터미널이 아니거나 `NO_COLOR` 환경 변수가 있으면 색이 자동으로 꺼집니다.
 
+## 명령
+
+### generate
+
+저장한 계정의 코드를 출력합니다. totp-cli처럼 코드만 출력하므로 파이프로 넘기거나 복사하기 쉽습니다.
+
+```console
+$ utc generate work github                     # 482913
+$ utc g work github --show-remaining           # 482913 (remaining time: 17s)
+$ utc generate work github --follow            # Ctrl+C를 누를 때까지 코드가 바뀔 때마다 한 줄씩
+$ utc generate work github --json
+```
+
+| 옵션 | 설명 |
+| --- | --- |
+| `--show-remaining` | 코드가 몇 초 더 유효한지 함께 출력 |
+| `--follow` | Ctrl+C를 누를 때까지 코드가 바뀔 때마다 새 코드 출력 |
+
+계정에 저장한 접두어, 코드 길이, 알고리즘, 시간 간격을 씁니다. `--json`이면 `namespace`, `account`, `code`, `remaining`을 출력하고, `--follow --json`이면 코드마다 JSON 한 줄을 출력합니다.
+
+### instant
+
+시크릿을 저장하지 않고 바로 코드를 만듭니다. 시크릿은 `UTC_TOKEN`에서 읽거나, 터미널에서는 보이지 않게 입력받고, 파이프로 넘기면 표준 입력의 첫 줄을 씁니다. 인자로는 받지 않으므로 셸 기록에 남지 않습니다.
+
+```console
+$ utc instant                                  # 시크릿을 입력받음
+$ cat token.txt | utc instant --length 8
+```
+
+| 옵션 | 설명 |
+| --- | --- |
+| `--length <digits>` | 코드 길이, 1~10 (기본값: 6) |
+| `--algorithm <name>` | HMAC 알고리즘: `sha1`, `sha256`, `sha512` (기본값: `sha1`) |
+| `--time-period <seconds>` | 코드 하나가 유효한 시간(초) (기본값: 30) |
+| `--show-remaining` | 코드가 몇 초 더 유효한지 함께 출력 |
+
 ## 저장소
 
 모든 계정은 저장소 파일 하나에 보관합니다. 비밀번호에서 scrypt로 만든 키로 AES-256-GCM 암호화를 합니다.
@@ -76,6 +112,7 @@ utc> exit
 | --- | --- |
 | `UTC_CREDENTIAL_FILE` | 기본 위치 대신 이 파일을 씁니다. 폴더가 아니라 파일 경로입니다. |
 | `UTC_PASS` | 비밀번호를 묻지 않도록 미리 줍니다. CI처럼 환경 변수가 안전한 곳에서만 쓰세요. |
+| `UTC_TOKEN` | `instant`에 쓸 시크릿을 묻지 않도록 미리 줍니다. |
 
 `UTC_PASS`가 없으면 터미널에서는 비밀번호를 묻고, 입력을 파이프로 넘기면 표준 입력의 첫 줄을 비밀번호로 씁니다.
 

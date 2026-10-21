@@ -33,6 +33,15 @@ export class Output {
     render();
   }
 
+  /** 결과를 이어서 낼 때(--follow) 씁니다. --json이면 data를 JSON 한 줄로 출력합니다. */
+  stream(data: unknown, render: () => void): void {
+    if (this.json) {
+      this.runtime.stdout.write(`${JSON.stringify(data)}\n`);
+      return;
+    }
+    render();
+  }
+
   line(text = ''): void {
     if (!this.json) {
       this.runtime.stdout.write(`${text}\n`);

@@ -18,6 +18,24 @@ describe('Output', () => {
     expect(stdout()).toBe('{\n  "ok": true\n}\n');
   });
 
+  it('streams one compact JSON line per result with --json', () => {
+    const json = createTestRuntime();
+    const plain = createTestRuntime();
+    const streamTo = (output: Output) => {
+      for (const code of ['1', '2']) {
+        output.stream({ code }, () => {
+          output.line(code);
+        });
+      }
+    };
+
+    streamTo(new Output(json.runtime, { json: true }));
+    streamTo(new Output(plain.runtime));
+
+    expect(json.stdout()).toBe('{"code":"1"}\n{"code":"2"}\n');
+    expect(plain.stdout()).toBe('1\n2\n');
+  });
+
   it('uses ASCII symbols on consoles without Unicode glyphs', () => {
     const { runtime, stdout } = createTestRuntime({ platform: 'win32' });
     const output = new Output(runtime);
