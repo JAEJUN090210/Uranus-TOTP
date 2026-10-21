@@ -44,10 +44,44 @@ utc> exit
 | Option | Description |
 | --- | --- |
 | `--json` | Print results as JSON for scripts |
+| `--strength <level>` | How hard a new credentials file or password is to guess: `fast`, `normal` or `strong` |
 | `-V, --version` | Print the version |
 | `-h, --help` | Show help |
 
 Colors turn off automatically when the output is not a terminal or the `NO_COLOR` environment variable is set.
+
+## Storage
+
+All accounts are kept in one credentials file, encrypted with AES-256-GCM using a key that is derived from your password with scrypt.
+
+| Platform | Location |
+| --- | --- |
+| Windows | `%APPDATA%\utc\credentials` |
+| macOS | `~/Library/Application Support/utc/credentials` |
+| Linux | `~/.config/utc/credentials`, or `$XDG_CONFIG_HOME/utc/credentials` when it is set |
+
+The first command that needs your accounts creates the file. In a terminal it asks how hard the password should be to guess, then asks for the new password twice. Pass `--strength` to skip the first question.
+
+| Strength | scrypt cost | Unlocking takes about |
+| --- | --- | --- |
+| `fast` | N=2^15 | 0.05 seconds |
+| `normal` (default) | N=2^17 | 0.2 seconds |
+| `strong` | N=2^18 | 0.4 seconds |
+
+Unlocking times were measured on a desktop PC and grow on slower machines. The strength is saved in the file, so files of every strength open the same way.
+
+### Environment variables
+
+| Variable | Description |
+| --- | --- |
+| `UTC_CREDENTIAL_FILE` | Use this file instead of the default location. It is a file path, not a folder. |
+| `UTC_PASS` | The password, so that it is not asked. Use it only where environment variables are safe, such as CI. |
+
+Without `UTC_PASS`, the password is asked in a terminal, or read from the first line of standard input when the input is piped:
+
+```console
+$ cat password.txt | utc list
+```
 
 ## Installation
 
