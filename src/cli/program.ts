@@ -3,9 +3,15 @@ import { Command, Option } from 'commander';
 import pkg from '../../package.json' with { type: 'json' };
 import { createGenerateCommand } from '../commands/generate';
 import { createInstantCommand } from '../commands/instant';
-import { STRENGTH_NAMES } from '../core/storage/crypto';
+import { STRENGTH_NAMES, type Strength } from '../core/storage/crypto';
 import { createColors, shouldUseColor } from '../ui/colors';
 import type { Runtime } from './runtime';
+
+/** 모든 명령이 command.optsWithGlobals()로 읽는 전역 옵션입니다. */
+export interface GlobalOptions {
+  readonly json?: boolean;
+  readonly strength?: Strength;
+}
 
 export type CommandFactory = (runtime: Runtime) => Command;
 

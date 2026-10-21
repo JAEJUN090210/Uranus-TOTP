@@ -1,9 +1,9 @@
 import { Command } from 'commander';
 
+import type { GlobalOptions } from '../cli/program';
 import type { Runtime } from '../cli/runtime';
 import { openStore } from '../cli/storage';
 import { type Clock, systemClock } from '../core/clock';
-import type { Strength } from '../core/storage/crypto';
 import { findAccount } from '../core/storage/vault';
 import { Output } from '../ui/output';
 import { printCodes } from './code-format';
@@ -11,11 +11,6 @@ import { printCodes } from './code-format';
 interface GenerateOptions {
   readonly showRemaining?: boolean;
   readonly follow?: boolean;
-}
-
-interface GlobalOptions {
-  readonly json?: boolean;
-  readonly strength?: Strength;
 }
 
 export function createGenerateCommand(runtime: Runtime, clock: Clock = systemClock): Command {
