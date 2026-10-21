@@ -49,6 +49,20 @@ Uranus-TOTP will be available through the following channels.
 | Ubuntu, Debian | apt | Planned |
 | macOS | Homebrew | Planned |
 
+## Building from source
+
+Until the first release, you can build and run Uranus-TOTP from source. Node.js 22.13 or later is required.
+
+```console
+$ git clone https://github.com/JAEJUN090210/Uranus-TOTP.git
+$ cd Uranus-TOTP
+$ npm install
+$ npm run build
+$ node dist/utc.cjs --help
+```
+
+Run `npm link` after building to use the `utc` command from anywhere.
+
 ## Security
 
 - Your password is never stored anywhere. If you forget it, the saved accounts cannot be recovered.
