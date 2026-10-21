@@ -9,9 +9,6 @@ English | [한국어](README.ko.md)
 
 Uranus-TOTP (`utc`) is a cross-platform command-line authenticator. Like Google Authenticator or Authy, it generates the time-based one-time passwords (TOTP) that two-factor authentication (2FA) asks for, right in your terminal. Accounts are grouped into namespaces and kept in a single password-encrypted file. Built with TypeScript on Node.js, based on [totp-cli](https://github.com/yitsushi/totp-cli).
 
-> [!NOTE]
-> Uranus-TOTP is in early development and has not been released yet. The commands and options below may change before the first release (v1.0.0).
-
 ## Features
 
 | Category | Commands |
@@ -26,7 +23,7 @@ Uranus-TOTP (`utc`) is a cross-platform command-line authenticator. Like Google 
 - **Human and machine friendly**: readable output by default, `--json` for scripting.
 - **Cross-platform**: Windows, Linux, and macOS.
 
-## Usage (preview)
+## Usage
 
 ```console
 $ utc add-token work github
@@ -249,18 +246,92 @@ $ cat password.txt | utc list
 
 ## Installation
 
-Uranus-TOTP will be available through the following channels.
+`utc` ships as a single executable with Node.js built in, so nothing else needs to be installed. It runs on Windows 10 or later (x64), macOS 13.5 or later (Apple silicon and Intel), and Linux with glibc 2.28 or later (x64 and arm64).
 
-| Platform | Channel | Status |
-| --- | --- | --- |
-| Linux, macOS | Install script | Planned |
-| Windows | Install script, winget | Planned |
-| Ubuntu, Debian | apt | Planned |
-| macOS | Homebrew | Planned |
+| Platform | Ways to install |
+| --- | --- |
+| Linux, macOS | [Install script](#install-script) |
+| Windows | [Install script](#install-script), winget (coming soon) |
+| Ubuntu, Debian | [apt](#apt-ubuntu-debian) |
+| macOS | [Homebrew](#homebrew-macos) |
+| Any | [Direct download](#direct-download) |
+
+### Install script
+
+On Linux and macOS:
+
+```console
+$ curl -fsSL https://jaejun090210.github.io/Uranus-TOTP/install.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```console
+> irm https://jaejun090210.github.io/Uranus-TOTP/install.ps1 | iex
+```
+
+The script picks the build for your operating system and CPU from the latest release, checks it against `SHA256SUMS`, and installs it without administrator rights:
+
+- **Linux and macOS**: `~/.local/bin/utc` (`/usr/local/bin/utc` when run as root). If the folder is not on your `PATH`, one line is added to your shell's startup file (`~/.zshrc`, `~/.bashrc`, `~/.bash_profile` on macOS, fish's `conf.d`, or `~/.profile`), so open a new terminal afterwards.
+- **Windows**: `%LOCALAPPDATA%\Programs\utc\utc.exe`, added to your user `PATH`. It works right away in the same window.
+
+Run the script again to update, and delete the executable to uninstall. Your credentials file stays where it is. These environment variables change what the script does:
+
+| Variable | Effect |
+| --- | --- |
+| `UTC_VERSION` | Install this version instead of the latest, such as `1.0.0` |
+| `UTC_INSTALL_DIR` | Install into this folder |
+| `UTC_NO_MODIFY_PATH` | Set to `1` to leave `PATH` and startup files alone |
+
+```console
+$ curl -fsSL https://jaejun090210.github.io/Uranus-TOTP/install.sh | UTC_VERSION=1.0.0 sh
+> $env:UTC_VERSION = '1.0.0'; irm https://jaejun090210.github.io/Uranus-TOTP/install.ps1 | iex
+```
+
+### apt (Ubuntu, Debian)
+
+Add the repository and its signing key once, then install:
+
+```console
+$ sudo install -d -m 0755 /etc/apt/keyrings
+$ curl -fsSL https://jaejun090210.github.io/Uranus-TOTP/apt/uranus-totp.gpg | sudo tee /etc/apt/keyrings/uranus-totp.gpg > /dev/null
+$ echo "deb [signed-by=/etc/apt/keyrings/uranus-totp.gpg] https://jaejun090210.github.io/Uranus-TOTP/apt stable main" | sudo tee /etc/apt/sources.list.d/uranus-totp.list
+$ sudo apt update
+$ sudo apt install utc
+```
+
+New versions arrive with `sudo apt upgrade`. The packages are built for amd64 and arm64 and install on Ubuntu 20.04, Debian 11, and newer.
+
+### Homebrew (macOS)
+
+```console
+$ brew install jaejun090210/tap/utc
+```
+
+New versions arrive with `brew upgrade`.
+
+### Direct download
+
+Every [release](https://github.com/JAEJUN090210/Uranus-TOTP/releases/latest) has these files:
+
+| Platform | File |
+| --- | --- |
+| Windows x64 | `utc-<version>-windows-x64.zip` |
+| macOS Apple silicon | `utc-<version>-macos-arm64.tar.gz` |
+| macOS Intel | `utc-<version>-macos-x64.tar.gz` |
+| Linux x64 | `utc-<version>-linux-x64.tar.gz`, `utc_<version>_amd64.deb` |
+| Linux arm64 | `utc-<version>-linux-arm64.tar.gz`, `utc_<version>_arm64.deb` |
+
+Each archive holds the `utc` executable (`utc.exe` on Windows), the license, the notice of totp-cli, and the licenses of the bundled Node.js and libraries. Extract it and move the executable to a folder on your `PATH`. `SHA256SUMS` lists the checksum of every file.
+
+The executables are not code-signed, so the first run may be blocked:
+
+- **Windows**: if SmartScreen shows "Windows protected your PC", choose **More info**, then **Run anyway**. You can also clear the download mark once in PowerShell with `Unblock-File .\utc.exe`. The install script is not affected.
+- **macOS**: Gatekeeper refuses to open a file downloaded with a browser because it is not notarized. Clear the download mark once with `xattr -d com.apple.quarantine utc`. Homebrew, the install script, and files downloaded with `curl` are not affected.
 
 ## Building from source
 
-Until the first release, you can build and run Uranus-TOTP from source. Node.js 22.13 or later is required.
+You can also build and run Uranus-TOTP from source. Node.js 22.13 or later is required.
 
 ```console
 $ git clone https://github.com/JAEJUN090210/Uranus-TOTP.git

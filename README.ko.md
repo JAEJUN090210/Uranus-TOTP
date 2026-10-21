@@ -9,9 +9,6 @@
 
 Uranus-TOTP(`utc`)는 Windows, Linux, macOS에서 동작하는 커맨드라인 OTP 인증기입니다. Google Authenticator나 Authy처럼 2단계 인증(2FA)에 쓰는 시간 기반 일회용 비밀번호(TOTP)를 터미널에서 바로 만들어 줍니다. 계정은 네임스페이스로 묶어 관리하고, 비밀번호로 암호화한 파일 하나에 보관합니다. TypeScript와 Node.js로 만들며, [totp-cli](https://github.com/yitsushi/totp-cli)를 바탕으로 합니다.
 
-> [!NOTE]
-> 아직 초기 개발 단계이며 정식 릴리즈 전입니다. 아래 명령과 옵션은 첫 릴리즈(v1.0.0) 전에 바뀔 수 있습니다.
-
 ## 기능
 
 | 분류 | 명령 |
@@ -26,7 +23,7 @@ Uranus-TOTP(`utc`)는 Windows, Linux, macOS에서 동작하는 커맨드라인 O
 - **사람도 기계도 읽기 쉬운 출력**: 기본은 읽기 쉬운 출력, 스크립트용으로는 `--json`
 - **크로스플랫폼**: Windows, Linux, macOS
 
-## 사용법 (미리보기)
+## 사용법
 
 ```console
 $ utc add-token work github
@@ -249,18 +246,92 @@ $ cat password.txt | utc list
 
 ## 설치
 
-아래 방법으로 배포할 예정입니다.
+`utc`는 Node.js를 함께 담은 실행 파일 하나라서 따로 설치할 것이 없습니다. Windows 10 이상(x64), macOS 13.5 이상(Apple 실리콘, Intel), glibc 2.28 이상인 Linux(x64, arm64)에서 동작합니다.
 
-| 플랫폼 | 배포 방법 | 상태 |
-| --- | --- | --- |
-| Linux, macOS | 설치 스크립트 | 예정 |
-| Windows | 설치 스크립트, winget | 예정 |
-| Ubuntu, Debian | apt | 예정 |
-| macOS | Homebrew | 예정 |
+| 플랫폼 | 설치 방법 |
+| --- | --- |
+| Linux, macOS | [설치 스크립트](#설치-스크립트) |
+| Windows | [설치 스크립트](#설치-스크립트), winget(준비 중) |
+| Ubuntu, Debian | [apt](#apt-ubuntu-debian) |
+| macOS | [Homebrew](#homebrew-macos) |
+| 모든 플랫폼 | [직접 내려받기](#직접-내려받기) |
+
+### 설치 스크립트
+
+Linux와 macOS:
+
+```console
+$ curl -fsSL https://jaejun090210.github.io/Uranus-TOTP/install.sh | sh
+```
+
+Windows(PowerShell):
+
+```console
+> irm https://jaejun090210.github.io/Uranus-TOTP/install.ps1 | iex
+```
+
+스크립트는 최신 릴리스에서 운영체제와 CPU에 맞는 파일을 골라 `SHA256SUMS`로 검사한 뒤, 관리자 권한 없이 설치합니다.
+
+- **Linux, macOS**: `~/.local/bin/utc`에 설치합니다(root로 실행하면 `/usr/local/bin/utc`). 이 폴더가 `PATH`에 없으면 쓰고 있는 셸의 설정 파일(`~/.zshrc`, `~/.bashrc`, macOS의 `~/.bash_profile`, fish의 `conf.d`, 그 밖에는 `~/.profile`)에 한 줄을 넣으므로, 설치 후 새 터미널을 여세요.
+- **Windows**: `%LOCALAPPDATA%\Programs\utc\utc.exe`에 설치하고 사용자 `PATH`에 추가합니다. 설치한 창에서 바로 쓸 수 있습니다.
+
+다시 실행하면 업데이트되고, 실행 파일을 지우면 삭제됩니다. 저장소 파일은 그대로 남습니다. 아래 환경 변수로 동작을 바꿀 수 있습니다.
+
+| 변수 | 효과 |
+| --- | --- |
+| `UTC_VERSION` | 최신 버전 대신 이 버전을 설치. 예: `1.0.0` |
+| `UTC_INSTALL_DIR` | 이 폴더에 설치 |
+| `UTC_NO_MODIFY_PATH` | `1`이면 `PATH`와 셸 설정 파일을 건드리지 않음 |
+
+```console
+$ curl -fsSL https://jaejun090210.github.io/Uranus-TOTP/install.sh | UTC_VERSION=1.0.0 sh
+> $env:UTC_VERSION = '1.0.0'; irm https://jaejun090210.github.io/Uranus-TOTP/install.ps1 | iex
+```
+
+### apt (Ubuntu, Debian)
+
+저장소와 서명 키를 한 번 등록한 뒤 설치합니다.
+
+```console
+$ sudo install -d -m 0755 /etc/apt/keyrings
+$ curl -fsSL https://jaejun090210.github.io/Uranus-TOTP/apt/uranus-totp.gpg | sudo tee /etc/apt/keyrings/uranus-totp.gpg > /dev/null
+$ echo "deb [signed-by=/etc/apt/keyrings/uranus-totp.gpg] https://jaejun090210.github.io/Uranus-TOTP/apt stable main" | sudo tee /etc/apt/sources.list.d/uranus-totp.list
+$ sudo apt update
+$ sudo apt install utc
+```
+
+새 버전은 `sudo apt upgrade`로 받습니다. amd64와 arm64용 패키지가 있고, Ubuntu 20.04와 Debian 11 이후 버전에 설치됩니다.
+
+### Homebrew (macOS)
+
+```console
+$ brew install jaejun090210/tap/utc
+```
+
+새 버전은 `brew upgrade`로 받습니다.
+
+### 직접 내려받기
+
+[릴리스](https://github.com/JAEJUN090210/Uranus-TOTP/releases/latest)마다 아래 파일이 올라갑니다.
+
+| 플랫폼 | 파일 |
+| --- | --- |
+| Windows x64 | `utc-<버전>-windows-x64.zip` |
+| macOS Apple 실리콘 | `utc-<버전>-macos-arm64.tar.gz` |
+| macOS Intel | `utc-<버전>-macos-x64.tar.gz` |
+| Linux x64 | `utc-<버전>-linux-x64.tar.gz`, `utc_<버전>_amd64.deb` |
+| Linux arm64 | `utc-<버전>-linux-arm64.tar.gz`, `utc_<버전>_arm64.deb` |
+
+압축 파일에는 `utc` 실행 파일(Windows는 `utc.exe`)과 라이선스, totp-cli 고지, 함께 담긴 Node.js와 라이브러리의 라이선스가 들어 있습니다. 압축을 풀고 실행 파일을 `PATH`에 있는 폴더로 옮기세요. 모든 파일의 체크섬은 `SHA256SUMS`에 있습니다.
+
+실행 파일에 코드 서명을 하지 않았기 때문에 처음 실행할 때 막힐 수 있습니다.
+
+- **Windows**: SmartScreen이 "Windows의 PC 보호" 창을 띄우면 **추가 정보**를 누른 뒤 **실행**을 누르세요. PowerShell에서 `Unblock-File .\utc.exe`로 내려받은 파일 표시를 한 번 지워도 됩니다. 설치 스크립트로 설치했다면 해당하지 않습니다.
+- **macOS**: 브라우저로 받은 파일은 공증을 받지 않았다는 이유로 Gatekeeper가 열지 않습니다. `xattr -d com.apple.quarantine utc`로 내려받은 파일 표시를 한 번 지우세요. Homebrew나 설치 스크립트로 설치했거나 `curl`로 받은 파일은 해당하지 않습니다.
 
 ## 소스에서 빌드하기
 
-첫 릴리즈 전까지는 소스를 직접 빌드해 실행할 수 있습니다. Node.js 22.13 이상이 필요합니다.
+소스를 직접 빌드해 실행할 수도 있습니다. Node.js 22.13 이상이 필요합니다.
 
 ```console
 $ git clone https://github.com/JAEJUN090210/Uranus-TOTP.git
