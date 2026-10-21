@@ -21,7 +21,8 @@ export interface OpenStoreOptions {
   readonly strength?: Strength;
 }
 
-function passwordFromEnv(runtime: Runtime): string | undefined {
+/** UTC_PASS에 담긴 비밀번호입니다. 없거나 비어 있으면 undefined입니다. */
+export function passwordFromEnv(runtime: Runtime): string | undefined {
   const password = runtime.env[PASSWORD_ENV];
   return password === undefined || password === '' ? undefined : password;
 }
@@ -52,9 +53,20 @@ export async function askPassword(runtime: Runtime): Promise<string> {
   return passwordFromEnv(runtime) ?? runtime.prompt.secret('Password: ');
 }
 
+export interface NewPasswordOptions {
+  /**
+   * UTC_PASS를 새 비밀번호로 쓸지 여부입니다. 저장소를 처음 만들 때는 쓰고,
+   * change-password에서는 UTC_PASS가 지금 비밀번호이므로 쓰지 않습니다.
+   */
+  readonly useEnv?: boolean;
+}
+
 /** 새 비밀번호를 받습니다. 터미널에서는 오타로 잠기지 않도록 두 번 입력받습니다. */
-export async function askNewPassword(runtime: Runtime): Promise<string> {
-  const fromEnv = passwordFromEnv(runtime);
+export async function askNewPassword(
+  runtime: Runtime,
+  { useEnv = true }: NewPasswordOptions = {},
+): Promise<string> {
+  const fromEnv = useEnv ? passwordFromEnv(runtime) : undefined;
   if (fromEnv !== undefined) {
     return fromEnv;
   }
@@ -71,10 +83,16 @@ export async function askNewPassword(runtime: Runtime): Promise<string> {
   return password;
 }
 
-/** 저장소를 보호할 강도를 묻습니다. 사람이 답할 수 없으면 기본값을 씁니다. */
-export async function chooseStrength(runtime: Runtime): Promise<Strength> {
+/**
+ * 저장소를 보호할 강도를 묻습니다. 그냥 Enter를 누르거나 사람이 답할 수 없으면 fallback을 씁니다.
+ * change-password는 지금 강도를 fallback으로 넘겨서, 묻지 않으면 강도가 그대로 유지되게 합니다.
+ */
+export async function chooseStrength(
+  runtime: Runtime,
+  fallback: Strength = DEFAULT_STRENGTH,
+): Promise<Strength> {
   if (!runtime.prompt.interactive) {
-    return DEFAULT_STRENGTH;
+    return fallback;
   }
   runtime.stderr.write(
     [
@@ -87,10 +105,10 @@ export async function chooseStrength(runtime: Runtime): Promise<Strength> {
   );
   for (;;) {
     const answer = (
-      await runtime.prompt.line(`Strength (${STRENGTH_NAMES.join(', ')}) [${DEFAULT_STRENGTH}]: `)
+      await runtime.prompt.line(`Strength (${STRENGTH_NAMES.join(', ')}) [${fallback}]: `)
     ).toLowerCase();
     if (answer === '') {
-      return DEFAULT_STRENGTH;
+      return fallback;
     }
     if (isStrength(answer)) {
       return answer;
