@@ -35,8 +35,8 @@ $ utc list work
 $ utc instant < secret.txt
 
 $ utc
-utc> generate work github
-utc> exit
+utc ❯ generate work github
+utc ❯ exit
 ```
 
 ### Global options
@@ -49,6 +49,16 @@ utc> exit
 | `-h, --help` | Show help |
 
 Colors turn off automatically when the output is not a terminal or the `NO_COLOR` environment variable is set.
+
+### Interactive shell
+
+Run `utc` without arguments to open an interactive shell. Every command works the same way as on the command line.
+
+- The password is asked the first time a command needs the credentials file, and not again after that.
+- `lock` forgets the password at once. It is also forgotten after 5 minutes without commands.
+- `Tab` completes command names and options, and also namespace and account names while the credentials file is unlocked.
+- `help [command]` shows help, `clear` clears the screen, and `exit` or `quit` leaves the shell.
+- `Ctrl+C` cancels the running command without leaving the shell. Press it twice on an empty line, or press `Ctrl+D`, to quit.
 
 ## Commands
 
