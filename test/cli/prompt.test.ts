@@ -76,9 +76,25 @@ describe('createPrompt with piped input', () => {
       'standard input ended before the password was given',
     );
   });
+
+  it('reads the rest of the input at once', async () => {
+    const { input, prompt } = pipe();
+    input.end('first\n[\n  1\n]\n');
+
+    expect(await prompt.line('Name: ')).toBe('first');
+    expect(await prompt.readAll()).toBe('[\n  1\n]');
+  });
 });
 
 describe('createPrompt in a terminal', () => {
+  it('asks for a file instead of reading the whole input', async () => {
+    const { prompt } = terminal();
+
+    await expect(prompt.readAll()).rejects.toThrow(
+      'standard input is a terminal: pipe the file into it, or give a file name',
+    );
+  });
+
   it('hides what is typed for secrets and restores the terminal', async () => {
     const { input, prompt, written } = terminal();
     const answer = prompt.secret('Password: ');
