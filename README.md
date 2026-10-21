@@ -4,6 +4,7 @@
 
 English | [한국어](README.ko.md)
 
+[![CI](https://github.com/JAEJUN090210/Uranus-TOTP/actions/workflows/ci.yml/badge.svg?branch=develop)](https://github.com/JAEJUN090210/Uranus-TOTP/actions/workflows/ci.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 Uranus-TOTP (`utc`) is a cross-platform command-line authenticator. Like Google Authenticator or Authy, it generates the time-based one-time passwords (TOTP) that two-factor authentication (2FA) asks for, right in your terminal. Accounts are grouped into namespaces and kept in a single password-encrypted file. Built with TypeScript on Node.js, based on [totp-cli](https://github.com/yitsushi/totp-cli).
