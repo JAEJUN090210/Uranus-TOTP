@@ -86,6 +86,76 @@ $ cat token.txt | utc instant --length 8
 | `--time-period <seconds>` | How many seconds each code stays valid (default: 30) |
 | `--show-remaining` | Also show how many seconds the code stays valid |
 
+### add-token
+
+Adds an account. The token is always asked, hidden in a terminal, so it never ends up in your shell history. A missing namespace or account name is asked too, and a namespace is created when it does not exist yet.
+
+```console
+$ utc add-token work github                    # asks for the token
+$ utc add work vpn --length 8 --prefix pin     # alias add
+$ utc add-token                                # also asks for the namespace and the account
+```
+
+| Option | Description |
+| --- | --- |
+| `--length <digits>` | Length of the code, from 1 to 10 (default: 6) |
+| `--prefix <text>` | Text to put in front of the code |
+| `--algorithm <name>` | HMAC algorithm: `sha1`, `sha256` or `sha512` (default: `sha1`) |
+| `--time-period <seconds>` | How many seconds each code stays valid (default: 30) |
+
+The token is checked before it is saved, so a token that was not copied completely is caught right away. When the input is piped, the lines are read in the order they are asked: the namespace and the account when they are missing, the token, then the password.
+
+### list
+
+Lists the namespaces, or the accounts in a namespace, sorted by name.
+
+```console
+$ utc list
+NAMESPACE  ACCOUNTS
+home       1
+work       2
+
+$ utc list work
+ACCOUNT  LENGTH  ALGORITHM  PERIOD  PREFIX
+github   6       sha1       30s     -
+vpn      8       sha256     60s     pin
+```
+
+Tokens are never shown, not even with `--json`.
+
+### update, set-length, set-prefix
+
+Change the code options of an account. `update` changes only the options that are given and takes the same options as `add-token`. `set-length` and `set-prefix` ask for anything that is missing, as in totp-cli.
+
+```console
+$ utc update work github --length 8 --algorithm sha256
+$ utc set-length work github 8
+$ utc set-prefix work vpn 1234
+$ utc set-prefix work vpn --clear              # removes the prefix
+```
+
+### rename
+
+```console
+$ utc rename account work github gh
+$ utc rename namespace work office
+```
+
+Missing names are asked. Unlike totp-cli, a name that is already taken is refused.
+
+### delete
+
+Deletes an account, or a namespace with all of its accounts. It shows what will be deleted and asks first. Without a terminal to ask in, `--yes` is required.
+
+```console
+$ utc delete work github
+$ utc delete work --yes
+```
+
+| Option | Description |
+| --- | --- |
+| `-y, --yes` | Delete without asking |
+
 ## Storage
 
 All accounts are kept in one credentials file, encrypted with AES-256-GCM using a key that is derived from your password with scrypt.

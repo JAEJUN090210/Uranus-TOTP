@@ -86,6 +86,76 @@ $ cat token.txt | utc instant --length 8
 | `--time-period <seconds>` | 코드 하나가 유효한 시간(초) (기본값: 30) |
 | `--show-remaining` | 코드가 몇 초 더 유효한지 함께 출력 |
 
+### add-token
+
+계정을 추가합니다. 시크릿은 항상 입력으로 받고 터미널에서는 보이지 않게 받으므로 셸 기록에 남지 않습니다. 네임스페이스나 계정 이름이 빠지면 함께 묻고, 없는 네임스페이스는 새로 만듭니다.
+
+```console
+$ utc add-token work github                    # 시크릿을 입력받음
+$ utc add work vpn --length 8 --prefix pin     # 별칭 add
+$ utc add-token                                # 네임스페이스와 계정 이름도 입력받음
+```
+
+| 옵션 | 설명 |
+| --- | --- |
+| `--length <digits>` | 코드 길이, 1~10 (기본값: 6) |
+| `--prefix <text>` | 코드 앞에 붙일 문자열 |
+| `--algorithm <name>` | HMAC 알고리즘: `sha1`, `sha256`, `sha512` (기본값: `sha1`) |
+| `--time-period <seconds>` | 코드 하나가 유효한 시간(초) (기본값: 30) |
+
+시크릿은 저장하기 전에 확인하므로, 덜 복사한 시크릿은 바로 알 수 있습니다. 입력을 파이프로 넘기면 묻는 순서대로 줄을 읽습니다. 빠진 네임스페이스와 계정 이름, 시크릿, 비밀번호 순서입니다.
+
+### list
+
+네임스페이스 목록이나 네임스페이스 안의 계정 목록을 이름순으로 보여 줍니다.
+
+```console
+$ utc list
+NAMESPACE  ACCOUNTS
+home       1
+work       2
+
+$ utc list work
+ACCOUNT  LENGTH  ALGORITHM  PERIOD  PREFIX
+github   6       sha1       30s     -
+vpn      8       sha256     60s     pin
+```
+
+시크릿은 `--json`에서도 보여 주지 않습니다.
+
+### update, set-length, set-prefix
+
+계정의 코드 옵션을 바꿉니다. `update`는 준 옵션만 바꾸며 `add-token`과 같은 옵션을 받습니다. `set-length`와 `set-prefix`는 totp-cli처럼 빠진 값을 묻습니다.
+
+```console
+$ utc update work github --length 8 --algorithm sha256
+$ utc set-length work github 8
+$ utc set-prefix work vpn 1234
+$ utc set-prefix work vpn --clear              # 접두어 지우기
+```
+
+### rename
+
+```console
+$ utc rename account work github gh
+$ utc rename namespace work office
+```
+
+빠진 이름은 묻습니다. totp-cli와 달리 이미 있는 이름으로는 바꾸지 않습니다.
+
+### delete
+
+계정 하나나, 네임스페이스를 그 안의 계정까지 모두 지웁니다. 지울 항목을 보여 주고 먼저 묻습니다. 물어볼 터미널이 없으면 `--yes`가 필요합니다.
+
+```console
+$ utc delete work github
+$ utc delete work --yes
+```
+
+| 옵션 | 설명 |
+| --- | --- |
+| `-y, --yes` | 묻지 않고 지우기 |
+
 ## 저장소
 
 모든 계정은 저장소 파일 하나에 보관합니다. 비밀번호에서 scrypt로 만든 키로 AES-256-GCM 암호화를 합니다.
