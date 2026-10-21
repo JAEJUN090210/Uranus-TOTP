@@ -156,6 +156,53 @@ $ utc delete work --yes
 | --- | --- |
 | `-y, --yes` | Delete without asking |
 
+### change-password
+
+Changes the password. In a terminal it also asks for the strength again, with the current strength as the default, and asks for the new password twice. `--strength` skips the strength question. `UTC_PASS` is used as the current password, never as the new one.
+
+```console
+$ utc change-password
+$ utc --strength strong change-password
+```
+
+### dump
+
+Exports every account, tokens included, as JSON. The file is **not encrypted**, so `--yes` is required, and it is created so that only you can read it. `-` writes to standard output, for example to encrypt it with another tool right away.
+
+```console
+$ utc dump backup.json --yes
+$ utc dump - --yes | age -e -r age1... > backup.json.age
+```
+
+| Option | Description |
+| --- | --- |
+| `-y, --yes` | Confirm that the tokens are written without encryption |
+
+### import
+
+Imports accounts from JSON in the format that `dump` writes. Every account and token is checked before anything is saved. When an account already exists, a terminal asks whether to overwrite it; without a terminal it is kept and reported. `-` reads standard input, in which case the password has to come from `UTC_PASS`.
+
+```console
+$ utc import backup.json
+$ utc import backup.json --overwrite
+```
+
+| Option | Description |
+| --- | --- |
+| `--overwrite` | Replace accounts that already exist without asking |
+
+#### Moving from totp-cli
+
+The JSON that `dump` writes has the same layout and key names as the YAML of totp-cli's `dump`, so a totp-cli export can be imported once it is converted to JSON, for example with [yq](https://github.com/mikefarah/yq):
+
+```console
+$ totp-cli dump --yes-please --output totp-cli.yaml
+$ yq -o=json totp-cli.yaml > totp-cli.json
+$ utc import totp-cli.json
+```
+
+Delete both files afterwards, because they hold your tokens without encryption.
+
 ## Storage
 
 All accounts are kept in one credentials file, encrypted with AES-256-GCM using a key that is derived from your password with scrypt.
