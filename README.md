@@ -50,6 +50,42 @@ utc> exit
 
 Colors turn off automatically when the output is not a terminal or the `NO_COLOR` environment variable is set.
 
+## Commands
+
+### generate
+
+Prints the code of a saved account. Only the code is printed, as in totp-cli, so it is easy to pipe or copy.
+
+```console
+$ utc generate work github                     # 482913
+$ utc g work github --show-remaining           # 482913 (remaining time: 17s)
+$ utc generate work github --follow            # a new line every time the code changes, until Ctrl+C
+$ utc generate work github --json
+```
+
+| Option | Description |
+| --- | --- |
+| `--show-remaining` | Also show how many seconds the code stays valid |
+| `--follow` | Print a new code every time it changes, until Ctrl+C |
+
+The account's prefix, code length, algorithm and time period are used. With `--json` the result has `namespace`, `account`, `code` and `remaining`, and with `--follow --json` every code is one line of JSON.
+
+### instant
+
+Generates a code from a token without saving it. The token comes from `UTC_TOKEN`, from a hidden question in a terminal, or from the first line of standard input. It is never taken as an argument, so it does not end up in your shell history.
+
+```console
+$ utc instant                                  # asks for the token
+$ cat token.txt | utc instant --length 8
+```
+
+| Option | Description |
+| --- | --- |
+| `--length <digits>` | Length of the code, from 1 to 10 (default: 6) |
+| `--algorithm <name>` | HMAC algorithm: `sha1`, `sha256` or `sha512` (default: `sha1`) |
+| `--time-period <seconds>` | How many seconds each code stays valid (default: 30) |
+| `--show-remaining` | Also show how many seconds the code stays valid |
+
 ## Storage
 
 All accounts are kept in one credentials file, encrypted with AES-256-GCM using a key that is derived from your password with scrypt.
@@ -76,6 +112,7 @@ Unlocking times were measured on a desktop PC and grow on slower machines. The s
 | --- | --- |
 | `UTC_CREDENTIAL_FILE` | Use this file instead of the default location. It is a file path, not a folder. |
 | `UTC_PASS` | The password, so that it is not asked. Use it only where environment variables are safe, such as CI. |
+| `UTC_TOKEN` | The token for `instant`, so that it is not asked. |
 
 Without `UTC_PASS`, the password is asked in a terminal, or read from the first line of standard input when the input is piped:
 
