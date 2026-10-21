@@ -10,6 +10,10 @@ on:
       - .github/workflows/release.yml
       - scripts/build.ts
       - scripts/build-sea.ts
+      - scripts/build-deb.ts
+      - scripts/build-apt-repo.ts
+      - scripts/build-site.ts
+      - scripts/lib/pages.ts
       - package.json
       - package-lock.json
   workflow_dispatch:
@@ -27,6 +31,18 @@ env:
   NODE_VERSION: 24
 
 jobs:
+  secrets:
+    name: Check secrets
+    runs-on: ubuntu-24.04
+    outputs:
+      apt: ${{ steps.check.outputs.apt }}
+    steps:
+      - id: check
+        env:
+          APT_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          echo "apt=$([ -n "$APT_KEY" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
@@ -61,6 +77,12 @@ jobs:
           export UTC_CREDENTIAL_FILE="$RUNNER_TEMP/credentials" UTC_PASS=smoke-test
           echo JBSWY3DPEHPK3PXP | "$exe" --strength fast add-token ci smoke > /dev/null
           "$exe" generate ci smoke > /dev/null
+      - name: Build the .deb package
+        if: startsWith(matrix.target, 'linux-')
+        run: |
+          # 공식 Node 실행 파일이 쓰는 공유 라이브러리입니다. .deb의 Depends와 맞는지 볼 수 있게 남깁니다.
+          ldd dist/sea/utc
+          npm run build:deb
       - uses: actions/upload-artifact@v7
         with:
           name: utc-${{ matrix.target }}
@@ -102,3 +124,70 @@ jobs:
               --title "🚀 :: $GITHUB_REF_NAME"
           fi
           gh release upload "$GITHUB_REF_NAME" dist/release/* --clobber
+
+  # GitHub Pages 사이트(안내 페이지, apt 저장소)를 만들고 실제로 apt로 설치해 봅니다.
+  # 태그가 아니거나 서명 키가 없으면 임시 키로 시험만 합니다.
+  site:
+    name: Build Pages site
+    needs: [secrets, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist/release
+          pattern: utc-linux-*
+          merge-multiple: true
+      - name: Import the signing key
+        if: startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.apt == 'true'
+        env:
+          APT_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: echo "$APT_KEY" | gpg --batch --import
+      - name: Make a throwaway signing key
+        if: ${{ !(startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.apt == 'true') }}
+        run: |
+          gpg --batch --passphrase '' --quick-gen-key \
+            'Uranus-TOTP test <test@example.invalid>' rsa3072 sign never
+      - name: Build the apt repository
+        env:
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: npx tsx scripts/build-apt-repo.ts
+      - name: Build the landing page
+        run: |
+          npx tsx scripts/build-site.ts
+          ls -l dist/site
+      - name: Install from the repository
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          sudo cp dist/site/apt/uranus-totp.gpg /etc/apt/keyrings/
+          source="deb [signed-by=/etc/apt/keyrings/uranus-totp.gpg] file://$PWD/dist/site/apt stable main"
+          echo "$source" | sudo tee /etc/apt/sources.list.d/uranus-totp.list
+          # 이 저장소만 읽어서, 서명과 목록이 맞는지 그대로 드러나게 합니다.
+          sudo apt-get update \
+            -o Dir::Etc::sourcelist=sources.list.d/uranus-totp.list \
+            -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
+          sudo apt-get install -y utc
+          test "$(utc --version)" = "$(node -p "require('./package.json').version")"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/site
+
+  pages:
+    name: Publish Pages site
+    if: startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.apt == 'true'
+    needs: [secrets, site, release]
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5
