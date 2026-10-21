@@ -116,6 +116,7 @@ hotfix/31_import-overwrite
    - Windows x64, Linux x64·arm64, macOS arm64·x64용 실행 파일과 `.deb`를 빌드하고 실제로 실행해 봅니다.
    - GitHub Release `🚀 :: vX.Y.Z`를 만들고 파일과 `SHA256SUMS`를 올립니다.
    - 안내 페이지와 서명한 apt 저장소를 GitHub Pages에 올립니다.
+   - Homebrew tap(`JAEJUN090210/homebrew-tap`)의 formula를 새 버전으로 바꿉니다.
 5. 자동으로 만들어진 Release 본문을 변경 내용에 맞게 다듬습니다.
 
 태그와 `package.json`의 버전이 다르면 워크플로는 아무것도 게시하지 않고 실패합니다. 배포에 쓰는 파일을 바꾼 PR에서는 같은 워크플로가 게시 없이 빌드와 설치 시험만 합니다.
@@ -125,3 +126,4 @@ hotfix/31_import-overwrite
 | Secret | 용도 |
 | --- | --- |
 | `APT_GPG_PRIVATE_KEY` | apt 저장소 서명 키(ASCII armor). 키에 암호가 있으면 `APT_GPG_PASSPHRASE`도 등록 |
+| `HOMEBREW_TAP_TOKEN` | `homebrew-tap` 저장소에 쓸 수 있는 토큰 |
