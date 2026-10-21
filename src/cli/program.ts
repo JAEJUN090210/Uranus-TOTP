@@ -2,6 +2,7 @@ import { Command, Option } from 'commander';
 
 import pkg from '../../package.json' with { type: 'json' };
 import { createAddTokenCommand } from '../commands/add-token';
+import { createChangePasswordCommand } from '../commands/change-password';
 import { createDeleteCommand } from '../commands/delete';
 import { createGenerateCommand } from '../commands/generate';
 import { createInstantCommand } from '../commands/instant';
@@ -42,7 +43,7 @@ export const COMMAND_GROUPS: readonly CommandGroup[] = [
       createDeleteCommand,
     ],
   },
-  { heading: 'Storage:', commands: [] },
+  { heading: 'Storage:', commands: [createChangePasswordCommand] },
 ];
 
 export function createProgram(
