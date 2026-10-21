@@ -1,0 +1,348 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # 배포 설정을 바꾸는 PR에서는 게시하지 않고 빌드만 시험합니다.
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - .github/workflows/release.yml
+      - scripts/build.ts
+      - scripts/build-sea.ts
+      - scripts/build-deb.ts
+      - scripts/build-apt-repo.ts
+      - scripts/build-site.ts
+      - scripts/lib/pages.ts
+      - scripts/homebrew-formula.ts
+      - scripts/winget-manifest.ts
+      - scripts/install.sh
+      - scripts/install.ps1
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  HUSKY: 0
+  # 실행 파일에 그대로 들어가는 Node 버전입니다. LTS를 씁니다.
+  NODE_VERSION: 24
+
+jobs:
+  secrets:
+    name: Check secrets
+    runs-on: ubuntu-24.04
+    outputs:
+      apt: ${{ steps.check.outputs.apt }}
+      homebrew: ${{ steps.check.outputs.homebrew }}
+      winget: ${{ steps.check.outputs.winget }}
+    steps:
+      - id: check
+        env:
+          APT_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          echo "apt=$([ -n "$APT_KEY" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "homebrew=$([ -n "$TAP_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "winget=$([ -n "$WINGET_TOKEN" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: windows-x64, os: windows-2025 }
+          - { target: linux-x64, os: ubuntu-24.04 }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+          - { target: macos-arm64, os: macos-15 }
+          - { target: macos-x64, os: macos-15-intel }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # 실행 파일을 만들고, 버전이 맞게 나오는지까지 확인합니다.
+      - run: npm run build:sea
+      - name: Smoke test
+        shell: bash
+        run: |
+          exe=dist/sea/utc
+          if [ -f dist/sea/utc.exe ]; then exe=dist/sea/utc.exe; fi
+          "$exe" --help > /dev/null
+          # 저장소 없이 시크릿으로 코드를 만들어 HMAC 계산까지 거칩니다.
+          UTC_TOKEN=JBSWY3DPEHPK3PXP "$exe" instant > /dev/null
+          # 임시 저장소를 만들고 계정을 넣어 scrypt, AES-GCM, 파일 쓰기와 읽기까지 거칩니다.
+          export UTC_CREDENTIAL_FILE="$RUNNER_TEMP/credentials" UTC_PASS=smoke-test
+          echo JBSWY3DPEHPK3PXP | "$exe" --strength fast add-token ci smoke > /dev/null
+          "$exe" generate ci smoke > /dev/null
+      - name: Lint install.sh
+        if: matrix.target == 'linux-x64'
+        run: shellcheck scripts/install.sh
+      # 설치 스크립트로 이번에 만든 파일을 설치해 봅니다. GitHub 대신 로컬 폴더에서 받고, HOME을 빈 폴더로
+      # 바꿔서 셸 설정 파일에 PATH를 넣는 동작과, 다시 실행했을 때 같은 줄을 또 넣지 않는지까지 확인합니다.
+      - name: Test install.sh
+        if: runner.os != 'Windows'
+        run: |
+          downloads="$RUNNER_TEMP/downloads"
+          mkdir -p "$downloads" "$RUNNER_TEMP/home"
+          cp dist/release/utc-*.tar.gz "$downloads/"
+          cd "$downloads"
+          if command -v sha256sum > /dev/null; then sha256sum utc-*; else shasum -a 256 utc-*; fi > SHA256SUMS
+          cd "$GITHUB_WORKSPACE"
+          export HOME="$RUNNER_TEMP/home" SHELL=/bin/bash UTC_DOWNLOAD_URL="file://$downloads"
+          sh scripts/install.sh
+          # curl | sh처럼 표준 입력으로 읽어도 동작해야 합니다. 이번은 같은 버전 재설치입니다.
+          sh < scripts/install.sh
+          test "$("$HOME/.local/bin/utc" --version)" = "$(node -p "require('./package.json').version")"
+          profile="$HOME/.bashrc"
+          if [ "$RUNNER_OS" = macOS ]; then profile="$HOME/.bash_profile"; fi
+          cat "$profile"
+          test "$(grep -Fxc 'export PATH="$HOME/.local/bin:$PATH"' "$profile")" = 1
+      - name: Lint install.ps1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          if (-not (Get-Module -ListAvailable PSScriptAnalyzer)) {
+            Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+          }
+          # 설치 과정을 보여 주는 출력이라 Write-Host를 씁니다.
+          $issues = Invoke-ScriptAnalyzer -Path scripts/install.ps1 -Severity Warning, Error -ExcludeRule PSAvoidUsingWriteHost
+          $issues | Format-Table -AutoSize -Wrap
+          if ($issues) { throw "PSScriptAnalyzer reported $(@($issues).Count) issue(s)" }
+      # 사용자 PC에 기본으로 있는 Windows PowerShell 5.1로, irm | iex와 같은 방식으로 두 번 실행합니다.
+      - name: Test install.ps1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $downloads = Join-Path $env:RUNNER_TEMP 'downloads'
+          New-Item -ItemType Directory -Force $downloads | Out-Null
+          Copy-Item dist/release/utc-*.zip $downloads
+          $zip = Get-Item (Join-Path $downloads 'utc-*.zip')
+          $hash = (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLower()
+          Set-Content -Path (Join-Path $downloads 'SHA256SUMS') -Value "$hash  $($zip.Name)" -Encoding Ascii
+          $env:UTC_DOWNLOAD_URL = ([Uri]$downloads).AbsoluteUri
+          $env:UTC_INSTALL_DIR = Join-Path $env:RUNNER_TEMP 'utc'
+          Get-Content -Raw scripts/install.ps1 | Invoke-Expression
+          Get-Content -Raw scripts/install.ps1 | Invoke-Expression
+          $expected = node -p "require('./package.json').version"
+          $actual = & (Join-Path $env:UTC_INSTALL_DIR 'utc.exe') --version
+          if ($actual -ne $expected) { throw "installed $actual, expected $expected" }
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User') -split ';'
+          if (@($userPath | Where-Object { $_ -eq $env:UTC_INSTALL_DIR }).Count -ne 1) {
+            throw "the user PATH should hold the install folder once: $userPath"
+          }
+      - name: Build the .deb package
+        if: startsWith(matrix.target, 'linux-')
+        run: |
+          # 공식 Node 실행 파일이 쓰는 공유 라이브러리입니다. .deb의 Depends와 맞는지 볼 수 있게 남깁니다.
+          ldd dist/sea/utc
+          npm run build:deb
+      - uses: actions/upload-artifact@v7
+        with:
+          name: utc-${{ matrix.target }}
+          path: dist/release/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      # 태그와 package.json 버전이 다르면 잘못 붙인 태그이므로 게시하지 않습니다.
+      - name: Check the version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || {
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          }
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist/release
+          pattern: utc-*
+          merge-multiple: true
+      - name: Write checksums
+        working-directory: dist/release
+        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+      # 손으로 만든 Release가 있으면 거기에 붙이고, 없으면 만듭니다.
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes \
+              --title "🚀 :: $GITHUB_REF_NAME"
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/release/* --clobber
+
+  # GitHub Pages 사이트(안내 페이지, 설치 스크립트, apt 저장소)를 만들고 실제로 apt로 설치해 봅니다.
+  # 태그가 아니거나 서명 키가 없으면 임시 키로 시험만 합니다.
+  site:
+    name: Build Pages site
+    needs: [secrets, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist/release
+          pattern: utc-linux-*
+          merge-multiple: true
+      - name: Import the signing key
+        if: startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.apt == 'true'
+        env:
+          APT_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: echo "$APT_KEY" | gpg --batch --import
+      - name: Make a throwaway signing key
+        if: ${{ !(startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.apt == 'true') }}
+        run: |
+          gpg --batch --passphrase '' --quick-gen-key \
+            'Uranus-TOTP test <test@example.invalid>' rsa3072 sign never
+      - name: Build the apt repository
+        env:
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: npx tsx scripts/build-apt-repo.ts
+      - name: Build the landing page and install scripts
+        run: |
+          npx tsx scripts/build-site.ts
+          ls -l dist/site
+      - name: Install from the repository
+        run: |
+          sudo install -d -m 0755 /etc/apt/keyrings
+          sudo cp dist/site/apt/uranus-totp.gpg /etc/apt/keyrings/
+          source="deb [signed-by=/etc/apt/keyrings/uranus-totp.gpg] file://$PWD/dist/site/apt stable main"
+          echo "$source" | sudo tee /etc/apt/sources.list.d/uranus-totp.list
+          # 이 저장소만 읽어서, 서명과 목록이 맞는지 그대로 드러나게 합니다.
+          sudo apt-get update \
+            -o Dir::Etc::sourcelist=sources.list.d/uranus-totp.list \
+            -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
+          sudo apt-get install -y utc
+          test "$(utc --version)" = "$(node -p "require('./package.json').version")"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/site
+
+  pages:
+    name: Publish Pages site
+    if: startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.apt == 'true'
+    needs: [secrets, site, release]
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5
+
+  # formula를 Homebrew로 검사하고, 받은 압축 파일로 실제 설치까지 해 봅니다.
+  homebrew-check:
+    name: Check Homebrew formula
+    needs: build
+    runs-on: macos-15
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist/release
+          pattern: utc-*
+          merge-multiple: true
+      - name: Audit the formula
+        run: |
+          npx tsx scripts/homebrew-formula.ts
+          brew tap-new --no-git local/utc
+          cp dist/homebrew/utc.rb "$(brew --repository local/utc)/Formula/utc.rb"
+          brew audit --strict --formula local/utc/utc
+          brew style --formula local/utc/utc
+      - name: Install from the downloaded archives
+        run: |
+          npx tsx scripts/homebrew-formula.ts --base-url "file://$PWD/dist/release"
+          cp dist/homebrew/utc.rb "$(brew --repository local/utc)/Formula/utc.rb"
+          brew install --formula local/utc/utc
+          brew test local/utc/utc
+          test "$(utc --version)" = "$(node -p "require('./package.json').version")"
+
+  homebrew:
+    name: Publish Homebrew formula
+    if: startsWith(github.ref, 'refs/tags/v') && needs.secrets.outputs.homebrew == 'true'
+    needs: [secrets, release, homebrew-check]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist/release
+          pattern: utc-*
+          merge-multiple: true
+      - run: npx tsx scripts/homebrew-formula.ts
+      - uses: actions/checkout@v7
+        with:
+          repository: JAEJUN090210/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+      - name: Commit the formula
+        run: |
+          mkdir -p tap/Formula
+          cp dist/homebrew/utc.rb tap/Formula/utc.rb
+          cd tap
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Formula/utc.rb
+          if git diff --cached --quiet; then
+            echo "the formula is already up to date"
+            exit 0
+          fi
+          git commit -m "🚀 :: utc ${GITHUB_REF_NAME#v}"
+          git push
+
+  # winget-releaser는 이미 등록된 패키지만 갱신할 수 있습니다.
+  # 첫 버전을 직접 올린 뒤 저장소 변수 WINGET_PUBLISHED를 true로 바꾸면 그다음 버전부터 자동으로 PR을 보냅니다.
+  winget:
+    name: Publish to winget
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') && vars.WINGET_PUBLISHED == 'true' &&
+      needs.secrets.outputs.winget == 'true'
+    needs: [secrets, release]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54
+        with:
+          identifier: JAEJUN090210.UranusTOTP
+          installers-regex: 'windows-x64\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}
