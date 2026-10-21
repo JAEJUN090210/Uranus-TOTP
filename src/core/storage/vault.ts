@@ -27,13 +27,19 @@ export function findAccount(
   return account;
 }
 
-/** 계정을 추가합니다. 네임스페이스가 없으면 만들고, 같은 이름의 계정이 있으면 UserError를 던집니다. */
-export function addAccount(namespaces: Namespace[], namespaceName: string, account: Account): void {
-  let namespace = namespaces.find((item) => item.name === namespaceName);
+/** 이름으로 네임스페이스를 찾고, 없으면 빈 네임스페이스를 만들어 돌려줍니다. */
+export function ensureNamespace(namespaces: Namespace[], name: string): Namespace {
+  let namespace = namespaces.find((item) => item.name === name);
   if (namespace === undefined) {
-    namespace = { name: namespaceName, accounts: [] };
+    namespace = { name, accounts: [] };
     namespaces.push(namespace);
   }
+  return namespace;
+}
+
+/** 계정을 추가합니다. 네임스페이스가 없으면 만들고, 같은 이름의 계정이 있으면 UserError를 던집니다. */
+export function addAccount(namespaces: Namespace[], namespaceName: string, account: Account): void {
+  const namespace = ensureNamespace(namespaces, namespaceName);
   if (namespace.accounts.some((item) => item.name === account.name)) {
     throw new UserError(`'${namespaceName}' already has an account named '${account.name}'`);
   }

@@ -6,6 +6,7 @@ import { createChangePasswordCommand } from '../commands/change-password';
 import { createDeleteCommand } from '../commands/delete';
 import { createDumpCommand } from '../commands/dump';
 import { createGenerateCommand } from '../commands/generate';
+import { createImportCommand } from '../commands/import';
 import { createInstantCommand } from '../commands/instant';
 import { createListCommand } from '../commands/list';
 import { createRenameCommand } from '../commands/rename';
@@ -44,7 +45,10 @@ export const COMMAND_GROUPS: readonly CommandGroup[] = [
       createDeleteCommand,
     ],
   },
-  { heading: 'Storage:', commands: [createChangePasswordCommand, createDumpCommand] },
+  {
+    heading: 'Storage:',
+    commands: [createChangePasswordCommand, createDumpCommand, createImportCommand],
+  },
 ];
 
 export function createProgram(
