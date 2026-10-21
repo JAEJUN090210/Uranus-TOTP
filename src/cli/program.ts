@@ -1,6 +1,7 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 
 import pkg from '../../package.json' with { type: 'json' };
+import { STRENGTH_NAMES } from '../core/storage/crypto';
 import { createColors, shouldUseColor } from '../ui/colors';
 import type { Runtime } from './runtime';
 
@@ -27,6 +28,13 @@ export function createProgram(
     .description(pkg.description)
     .version(pkg.version)
     .option('--json', 'print results as JSON')
+    // 저장소는 어느 명령에서든 처음 쓸 때 만들어지므로 강도는 전역 옵션으로 받습니다.
+    .addOption(
+      new Option(
+        '--strength <level>',
+        'how hard a new credentials file or password is to guess',
+      ).choices(STRENGTH_NAMES),
+    )
     // 대화형 셸 안에서도 쓸 수 있도록 commander가 프로세스를 끝내는 대신 예외를 던지게 합니다.
     .exitOverride()
     .configureOutput({

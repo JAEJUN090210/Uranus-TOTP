@@ -44,10 +44,44 @@ utc> exit
 | 옵션 | 설명 |
 | --- | --- |
 | `--json` | 스크립트에서 쓰기 좋게 결과를 JSON으로 출력 |
+| `--strength <level>` | 새 저장소 파일이나 비밀번호의 암호화 강도: `fast`, `normal`, `strong` |
 | `-V, --version` | 버전 출력 |
 | `-h, --help` | 도움말 출력 |
 
 출력이 터미널이 아니거나 `NO_COLOR` 환경 변수가 있으면 색이 자동으로 꺼집니다.
+
+## 저장소
+
+모든 계정은 저장소 파일 하나에 보관합니다. 비밀번호에서 scrypt로 만든 키로 AES-256-GCM 암호화를 합니다.
+
+| 플랫폼 | 위치 |
+| --- | --- |
+| Windows | `%APPDATA%\utc\credentials` |
+| macOS | `~/Library/Application Support/utc/credentials` |
+| Linux | `~/.config/utc/credentials`, `$XDG_CONFIG_HOME`이 있으면 `$XDG_CONFIG_HOME/utc/credentials` |
+
+계정이 필요한 명령을 처음 실행하면 파일을 만듭니다. 터미널에서는 비밀번호를 얼마나 풀기 어렵게 할지 묻고, 새 비밀번호를 두 번 입력받습니다. `--strength`를 주면 첫 질문을 건너뜁니다.
+
+| 강도 | scrypt 비용 | 잠금 해제에 걸리는 시간 |
+| --- | --- | --- |
+| `fast` | N=2^15 | 약 0.05초 |
+| `normal` (기본) | N=2^17 | 약 0.2초 |
+| `strong` | N=2^18 | 약 0.4초 |
+
+시간은 데스크톱 PC에서 잰 값이며 느린 기기에서는 더 걸립니다. 강도는 파일에 함께 저장되므로 어느 강도로 만든 파일이든 똑같이 열 수 있습니다.
+
+### 환경 변수
+
+| 변수 | 설명 |
+| --- | --- |
+| `UTC_CREDENTIAL_FILE` | 기본 위치 대신 이 파일을 씁니다. 폴더가 아니라 파일 경로입니다. |
+| `UTC_PASS` | 비밀번호를 묻지 않도록 미리 줍니다. CI처럼 환경 변수가 안전한 곳에서만 쓰세요. |
+
+`UTC_PASS`가 없으면 터미널에서는 비밀번호를 묻고, 입력을 파이프로 넘기면 표준 입력의 첫 줄을 비밀번호로 씁니다.
+
+```console
+$ cat password.txt | utc list
+```
 
 ## 설치
 
