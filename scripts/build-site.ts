@@ -35,6 +35,11 @@ const methods: readonly Method[] = [
     ],
     note: 'Later versions arrive with sudo apt upgrade.',
   },
+  {
+    title: 'macOS (Homebrew)',
+    commands: ['brew install jaejun090210/tap/utc'],
+    note: 'Later versions arrive with brew upgrade.',
+  },
 ];
 
 const body = methods
